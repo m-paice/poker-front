@@ -1,12 +1,18 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import Socket from "socket.io-client";
 
-import { URL_API } from "../service/api";
+import api, { URL_API } from "../service/api";
+import history from "../utils/history";
 
+interface Rooms {
+    id: string;
+    name: string;
+}
 interface PlayerTypes {
-    id: number;
+    id: string;
     name: string;
     vote: number;
+    onlyView: boolean;
 }
 
 interface ResultTypes {
@@ -15,17 +21,23 @@ interface ResultTypes {
 }
 
 interface UserTypes {
+    id?: string;
+    roomId: string;
     name: string;
+    onlyView: boolean;
 }
 
 interface GameContextTypes {
     user: UserTypes;
 
-    joinGame: (data: { username: string }) => void;
+    joinGame: (data) => void;
     startGame: () => void;
     resetGame: () => void;
     vote: (data) => void;
     remove: (data) => void;
+    createRoom: (data) => void;
+    getAllRooms: () => void;
+    joinRoom: (data) => void;
 
     players: PlayerTypes[];
     result: ResultTypes;
@@ -33,6 +45,8 @@ interface GameContextTypes {
     enableReveal: boolean;
     start: boolean;
     currentVote: number;
+
+    rooms: Rooms[];
 }
 
 const GameContext = createContext<GameContextTypes>({} as GameContextTypes);
@@ -44,36 +58,11 @@ export const GameContextProvider = ({ children }) => {
     const [result, setResult] = useState<ResultTypes>({ average: null, votesOfPoints: {} });
     const [start, setStart] = useState(false);
 
+    const [rooms, setRooms] = useState<Rooms[]>([]);
+
     const [currentVote, setCurrentVote] = useState(null);
-    const [io, setIo] = useState(null);
 
-    useEffect(() => {
-        if (!io) return;
-
-        io.on("joined", (data) => {
-            const { users } = data;
-            setPlayers(users);
-        });
-
-        io.on("voted", (data) => {
-            const { user } = data;
-
-            handleVoted(user);
-        });
-        io.on("disconnected", (data) => {
-            const { user } = data;
-
-            handleDisconnected(user);
-        });
-        io.on("started", (data) => {
-            const { users } = data;
-
-            handleStarted(users);
-        });
-        io.on("reseted", () => {
-            handleReseted();
-        });
-    }, [io]);
+    const io = useRef(null);
 
     useEffect(() => {
         const checkEnable = players.some((item) => !item.vote);
@@ -81,13 +70,62 @@ export const GameContextProvider = ({ children }) => {
         setEnableReveal(checkEnable);
     }, [players]);
 
-    const connect = (data) => {
-        const { username } = data;
-
+    useEffect(() => {
         const socketIo = Socket(URL_API);
 
-        setIo(socketIo);
-        socketIo.emit("join", { username });
+        io.current = socketIo;
+
+        socketIo.on("connect", () => {
+            setUser((prevState) => ({ ...prevState, id: socketIo.id }));
+        });
+
+        socketIo.on("new_user", (data) => {
+            setPlayers((prevState) => {
+                return [...prevState, data];
+            });
+        });
+
+        socketIo.on("disconnected", (data) => {
+            setPlayers((prevState) => {
+                return prevState.filter((user) => user.id !== data);
+            });
+        });
+
+        socketIo.on("voted", (data) => {
+            handleVoted(data);
+        });
+
+        socketIo.on("started", (data) => {
+            handleStarted(data);
+        });
+
+        socketIo.on("reseted", () => {
+            handleReseted();
+        });
+    }, [io]);
+
+    const handleCreateRoom = async (data) => {
+        const response = await api.post("/rooms", data);
+
+        setRooms([...rooms, response.data]);
+
+        history.push("/");
+    };
+
+    const handleGetAllRooms = async () => {
+        const response = await api.get("/rooms");
+
+        setRooms(response.data);
+    };
+
+    const getPlayersFromRoomId = async (roomId) => {
+        const response = await api.get(`/users/${roomId}`);
+
+        setPlayers(response.data);
+    };
+
+    const handleJoinRoom = (roomId) => {
+        history.push(`/room/${roomId}`);
     };
 
     const handleVoted = (user) => {
@@ -96,20 +134,12 @@ export const GameContextProvider = ({ children }) => {
                 if (item.id === user.id) {
                     return {
                         ...item,
-                        vote: user.id,
+                        vote: user.vote,
                     };
                 }
 
                 return item;
             });
-
-            return payload;
-        });
-    };
-
-    const handleDisconnected = (user) => {
-        setPlayers((previousValues) => {
-            const payload = previousValues.filter((item) => item.id !== user.id);
 
             return payload;
         });
@@ -127,19 +157,25 @@ export const GameContextProvider = ({ children }) => {
     };
 
     const handleSocketVote = (vote) => {
-        return io.emit("vote", { vote });
+        return io.current.emit("vote", { vote });
     };
 
-    const handleSocketStart = () => {
-        return io.emit("start");
+    const handleSocketStart = async () => {
+        const response = await api.get(`/users/${user.roomId}`);
+
+        handleStarted(response.data);
+
+        return io.current.emit("start", { roomId: user.roomId });
     };
 
     const handleSocketReset = () => {
-        return io.emit("reset");
+        handleReseted();
+
+        return io.current.emit("reset", { roomId: user.roomId });
     };
 
     const handleSocketRemove = (data) => {
-        return io.emit("remove", { id: data });
+        return io.current.emit("remove", { id: data });
     };
 
     const handleStarted = (users) => {
@@ -166,11 +202,28 @@ export const GameContextProvider = ({ children }) => {
         setStart(true);
     };
 
-    const handleJoinGame = (data: { username: string }) => {
-        const { username } = data;
-        setUser({ name: username });
+    const handleJoinGame = (data: { username: string; onlyView: boolean; roomId: string }) => {
+        const { username, onlyView, roomId } = data;
 
-        connect({ username });
+        io.current.emit("join", {
+            roomId,
+        });
+
+        io.current.emit("set_user", {
+            roomId,
+            name: username,
+            onlyView,
+        });
+
+        setUser((prevState) => {
+            return {
+                ...prevState,
+                roomId,
+                name: username,
+                onlyView,
+            };
+        });
+        getPlayersFromRoomId(roomId);
     };
 
     const handleResetGame = () => {
@@ -182,11 +235,25 @@ export const GameContextProvider = ({ children }) => {
 
         const vote = data.vote === 0 ? -1 : data.vote;
 
+        setPlayers((prevState) => {
+            const payload = prevState.map((item) => {
+                if (item.id === user.id) {
+                    return {
+                        ...item,
+                        vote,
+                    };
+                }
+
+                return item;
+            });
+
+            return payload;
+        });
         handleSocketVote(vote);
     };
 
-    const handleStartClik = () => {
-        handleSocketStart();
+    const handleStartClik = async () => {
+        await handleSocketStart();
     };
 
     const handleRemoveClick = (data) => {
@@ -203,11 +270,16 @@ export const GameContextProvider = ({ children }) => {
                 resetGame: handleResetGame,
                 vote: handleVote,
                 remove: handleRemoveClick,
+                createRoom: handleCreateRoom,
+                getAllRooms: handleGetAllRooms,
+                joinRoom: handleJoinRoom,
+
                 players,
                 result,
                 enableReveal,
                 start,
                 currentVote,
+                rooms,
             }}
         >
             {children}

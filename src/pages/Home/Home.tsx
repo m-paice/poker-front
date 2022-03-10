@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 
+import { useParams } from "react-router-dom";
 import { FiTarget, FiTrash2 } from "react-icons/fi";
 
 import { useGameContext } from "../../contexts/gameContext";
@@ -23,6 +24,7 @@ import {
     ModalBody,
     WrapperInput,
     Button,
+    WrapperCheckbox,
 } from "./styles";
 
 const Home: React.FC<Props> = (props) => {
@@ -40,7 +42,10 @@ const Home: React.FC<Props> = (props) => {
         currentVote,
     } = useGameContext();
 
+    const { id } = useParams<{ id: string }>();
+
     const [username, setUsername] = useState("");
+    const [onlyView, setOnlyView] = useState(false);
     const [currentPlayer, setCurrentePlayer] = useState(null);
 
     const handleStartClick = () => {
@@ -50,10 +55,12 @@ const Home: React.FC<Props> = (props) => {
         resetGame();
     };
 
-    const handleJoinClick = () => {
+    const handleSubmit = (event: React.FormEvent) => {
+        event.preventDefault();
+
         if (!username.trim()) return;
 
-        joinGame({ username: username.trim() });
+        joinGame({ username: username.trim(), onlyView, roomId: id });
     };
 
     const hanldeVoteClick = (data) => {
@@ -84,8 +91,9 @@ const Home: React.FC<Props> = (props) => {
                 <div className="players">
                     {players.map((item) => (
                         <div key={item.id}>
-                            <Player onDoubleClick={() => handleDoubleClick(item)} voting={!item.vote}>
+                            <Player onDoubleClick={() => handleDoubleClick(item)} voting={!item.vote || start}>
                                 {currentPlayer?.id === item.id && <FiTrash2 onClick={() => remove(item.id)} />}
+                                {start ? (item.vote === -1 ? 0 : item.vote) : null}
                             </Player>
                             <span className="name">{item.name}</span>
                         </div>
@@ -113,36 +121,51 @@ const Home: React.FC<Props> = (props) => {
                 </div>
             </Wrapper>
 
-            <WrapperCards>
-                {rules.map((item) => (
-                    <div key={item.key}>
-                        <Card
-                            disabled={!!result.average}
-                            onClick={() => hanldeVoteClick(item.value)}
-                            voted={currentVote === item.value}
-                        >
-                            <span className="count">{result.votesOfPoints[item.value]}</span>
+            {!user?.onlyView && (
+                <WrapperCards>
+                    {rules.map((item) => (
+                        <div key={item.key}>
+                            <Card
+                                disabled={!!result.average}
+                                onClick={() => hanldeVoteClick(item.value)}
+                                voted={currentVote === item.value}
+                            >
+                                <span className="count">{result.votesOfPoints[item.value]}</span>
 
-                            {item.key}
-                        </Card>
-                    </div>
-                ))}
-            </WrapperCards>
+                                {item.key}
+                            </Card>
+                        </div>
+                    ))}
+                </WrapperCards>
+            )}
 
-            {!user && (
+            {!user?.name && (
                 <Modal>
                     <ModalBody>
                         <h1> Welcome to Planning Poker - Ikatec </h1>
-                        <WrapperInput>
-                            <label> Your name </label>
+                        <form onSubmit={handleSubmit}>
+                            <div>
+                                <WrapperInput>
+                                    <label> Your name </label>
 
-                            <input
-                                placeholder="Type your name here..."
-                                value={username}
-                                onChange={(event) => setUsername(event.target.value)}
-                            />
-                        </WrapperInput>
-                        <Button onClick={handleJoinClick}> Save </Button>
+                                    <input
+                                        placeholder="Type your name here..."
+                                        value={username}
+                                        onChange={(event) => setUsername(event.target.value)}
+                                    />
+                                </WrapperInput>
+
+                                <WrapperCheckbox>
+                                    <input
+                                        type="checkbox"
+                                        onChange={(event) => setOnlyView(event.target.checked)}
+                                        id="checkbox"
+                                    />
+                                    <label htmlFor="checkbox">Only view</label>
+                                </WrapperCheckbox>
+                            </div>
+                            <Button type="submit"> Save </Button>
+                        </form>
                     </ModalBody>
                 </Modal>
             )}

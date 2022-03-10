@@ -289,6 +289,20 @@ export const ModalBody = styled.div`
     > h1 {
         font-size: 24px;
     }
+
+    > form {
+        width: 100%;
+        height: 250px;
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+
+        > div {
+            width: 100%;
+        }
+    }
 `;
 
 export const WrapperInput = styled.div`
@@ -318,7 +332,6 @@ export const WrapperInput = styled.div`
 
 export const Button = styled.button`
     width: 100%;
-    max-width: 500px;
     height: 45px;
 
     padding: 0 7px;
@@ -331,5 +344,26 @@ export const Button = styled.button`
 
     :hover {
         opacity: 0.8;
+    }
+`;
+
+export const WrapperCheckbox = styled.div`
+    display: flex;
+    align-items: center;
+
+    margin-top: 15px;
+
+    input[type="checkbox"] {
+        width: 25px;
+        height: 25px;
+    }
+
+    label {
+        margin-left: 7px;
+        cursor: pointer;
+
+        :hover {
+            opacity: 0.8;
+        }
     }
 `;
