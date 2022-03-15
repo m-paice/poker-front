@@ -80,6 +80,7 @@ export const GameContextProvider = ({ children }) => {
         });
 
         socketIo.on("new_user", (data) => {
+            if (data.onlyView) return;
             setPlayers((prevState) => {
                 return [...prevState, data];
             });
@@ -96,7 +97,8 @@ export const GameContextProvider = ({ children }) => {
         });
 
         socketIo.on("started", (data) => {
-            handleStarted(data);
+            const players = data.filter((player) => !player.onlyView);
+            handleStarted(players);
         });
 
         socketIo.on("reseted", () => {
@@ -121,7 +123,9 @@ export const GameContextProvider = ({ children }) => {
     const getPlayersFromRoomId = async (roomId) => {
         const response = await api.get(`/users/${roomId}`);
 
-        setPlayers(response.data);
+        const players = response.data.filter((user) => !user.onlyView);
+
+        setPlayers(players);
     };
 
     const handleJoinRoom = (roomId) => {
@@ -163,7 +167,9 @@ export const GameContextProvider = ({ children }) => {
     const handleSocketStart = async () => {
         const response = await api.get(`/users/${user.roomId}`);
 
-        handleStarted(response.data);
+        const players = response.data.filter((player) => !player.onlyView);
+
+        handleStarted(players);
 
         return io.current.emit("start", { roomId: user.roomId });
     };
