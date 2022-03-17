@@ -32,6 +32,18 @@ export const Header = styled.div`
     div {
         display: flex;
         align-items: center;
+        width: 350px;
+    }
+
+    span {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 350px;
+    }
+
+    span.end {
+        justify-content: flex-end;
     }
 
     svg {

@@ -29,7 +29,7 @@ const Room: React.FC<Props> = ({ children }) => {
                 <Wrapper>
                     {rooms.map((room, index) => (
                         <Item key={index}>
-                            <p> {room.name} </p> <button onClick={() => joinRoom(room.id)}> Join </button>
+                            <p> {room.name} </p> <button onClick={() => joinRoom(room)}> Join </button>
                         </Item>
                     ))}
                 </Wrapper>

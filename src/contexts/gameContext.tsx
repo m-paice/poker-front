@@ -25,6 +25,10 @@ interface UserTypes {
     roomId: string;
     name: string;
     onlyView: boolean;
+    room: {
+        id: string;
+        name: string;
+    };
 }
 
 interface GameContextTypes {
@@ -128,8 +132,16 @@ export const GameContextProvider = ({ children }) => {
         setPlayers(players);
     };
 
-    const handleJoinRoom = (roomId) => {
-        history.push(`/room/${roomId}`);
+    const handleJoinRoom = (room) => {
+        setUser((prevState) => ({
+            ...prevState,
+            room: {
+                id: room.id,
+                name: room.name,
+            },
+        }));
+
+        history.push(`/room/${room.id}`);
     };
 
     const handleVoted = (user) => {

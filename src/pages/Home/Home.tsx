@@ -83,7 +83,9 @@ const Home: React.FC<Props> = (props) => {
                     <h1>Planning Poker - Ikatec</h1>
                 </div>
 
-                <span>
+                <span> {user?.room?.name} </span>
+
+                <span className="end">
                     {user?.name} - versão {version}
                 </span>
             </Header>
