@@ -87,7 +87,7 @@ export const Wrapper = styled.div`
 
             svg {
                 color: red;
-                height: 50px;
+                height: 30px;
                 width: 50px;
             }
         }

@@ -70,9 +70,11 @@ const Home: React.FC<Props> = (props) => {
     };
 
     const handleDoubleClick = (player) => {
-        if (currentPlayer?.id === player.id) return setCurrentePlayer(null);
+        if (player.id === user.id) return;
 
-        return setCurrentePlayer(player);
+        // if (currentPlayer?.id === player.id) return setCurrentePlayer(null);
+
+        setCurrentePlayer(player);
     };
 
     return (
@@ -94,7 +96,16 @@ const Home: React.FC<Props> = (props) => {
                     {players.map((item) => (
                         <div key={item.id}>
                             <Player onDoubleClick={() => handleDoubleClick(item)} voting={!item.vote || start}>
-                                {currentPlayer?.id === item.id && <FiTrash2 onClick={() => remove(item.id)} />}
+                                {currentPlayer?.id === item.id && (
+                                    <FiTrash2
+                                        onClick={() =>
+                                            remove({
+                                                userId: item.id,
+                                                roomId: item.roomId,
+                                            })
+                                        }
+                                    />
+                                )}
                                 {start ? (item.vote === -1 ? 0 : item.vote) : null}
                             </Player>
                             <span className="name">{item.name}</span>

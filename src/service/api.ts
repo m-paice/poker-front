@@ -6,7 +6,7 @@ const envoriment = {
     production: "http://104.131.23.234:3332",
 };
 
-export const URL_API = envoriment["production"];
+export const URL_API = envoriment["development"];
 
 export default axios.create({
     baseURL: URL_API,

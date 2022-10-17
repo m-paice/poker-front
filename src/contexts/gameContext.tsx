@@ -10,6 +10,7 @@ interface Rooms {
 }
 interface PlayerTypes {
     id: string;
+    roomId: string;
     name: string;
     vote: number;
     onlyView: boolean;
@@ -108,6 +109,12 @@ export const GameContextProvider = ({ children }) => {
         socketIo.on("reseted", () => {
             handleReseted();
         });
+
+        socketIo.on("removed", (data) => {
+            setPlayers((prevState) => {
+                return prevState.filter((player) => player.id !== data.userId);
+            });
+        });
     }, [io]);
 
     const handleCreateRoom = async (data) => {
@@ -192,8 +199,8 @@ export const GameContextProvider = ({ children }) => {
         return io.current.emit("reset", { roomId: user.roomId });
     };
 
-    const handleSocketRemove = (data) => {
-        return io.current.emit("remove", { id: data });
+    const handleSocketRemove = ({ userId, roomId }: { userId: string; roomId: string }) => {
+        return io.current.emit("remove", { userId, roomId });
     };
 
     const handleStarted = (users) => {
@@ -274,8 +281,11 @@ export const GameContextProvider = ({ children }) => {
         await handleSocketStart();
     };
 
-    const handleRemoveClick = (data) => {
-        handleSocketRemove(data);
+    const handleRemoveClick = ({ userId, roomId }: { userId: string; roomId: string }) => {
+        setPlayers((prevState) => {
+            return prevState.filter((user) => user.id !== userId);
+        });
+        handleSocketRemove({ userId, roomId });
     };
 
     return (
